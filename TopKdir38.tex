@@ -1,0 +1,1084 @@
+\documentclass[a4paper,twoside]{article}
+
+\usepackage{epsfig}
+\usepackage{subcaption}
+\usepackage{calc}
+\usepackage{amssymb}
+\usepackage{amstext}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{multicol}
+\usepackage{pslatex}
+\usepackage{apalike}
+\usepackage{SCITEPRESS}     % Please add other packages that you may need BEFORE the SCITEPRESS.sty package.
+\usepackage{mathtools, cuted}
+
+\begin{document}
+
+\title{%Authors' Instructions: Preparation of Camera-Ready Contributions to SCITEPRESS Proceedings
+Topological approach for finding nearest neighbor sequence in time series
+}
+
+\author{\authorname{Blind\sup{1}\orcidAuthor{0000-0000-0000-0000} and Blind\sup{1}\orcidAuthor{0000-0000-0000-0000}}
+\affiliation{\sup{1}}
+\email{}
+}
+
+\keywords{Time series, Anomaly, Discord, Nearest neighbor distance.}
+
+\abstract{The aim of this work is to obtain a good quality approximation of the nearest neighbor distance ($nnd$) profile among sequences of a time series.
+The knowledge of the nearest neighbor distance of all the sequences provides useful information regarding, for example, anomalies and clusters of a time series, however the complexity of this task grows quadratically with the number of sequences, thus limiting its possible application. We propose here an approximated method which allows to obtain good quality $nnd$ profiles faster (1-2 orders of magnitude) than the brute force approach and which exploits the interdependence of three different topologies of a time series, one induced by the SAX clustering procedure, one induced by the position in time of each sequence and one by the Euclidean distance. The quality of the approximation has been evaluated with real life time series, where more than 98\% of the $nnd$ values obtained with our approach are exact and the average relative error for the approximated ones is usually below 5\%.}
+
+\onecolumn \maketitle \normalsize \setcounter{footnote}{0} \vfill
+
+%\section{\uppercase{Introduction}}
+%\label{sec:introduction}
+%\section{\uppercase{Manuscript Preparation}}
+%\section*{\uppercase{Acknowledgements}}
+
+
+\section{Introduction and related works}\label{sec:intro}
+
+%Time series analysis is an important topic nowadays, and in particular one is interested in finding anomalies, recurrent patterns, trends, etc. 
+
+The large amount of data produced by sensors implies that human analysis of time series needs to be supported by machine learning techniques.
+One of the first problems encountered at the time of comparing sequences within a time series is that their length can span few hundreds of points, and for this reason some form of dimensionality reduction becomes propaedeutic for further investigations. From this point of view the symbolic aggregate approximation (SAX) algorithm \cite{sax}  has proven to be very effective, it scales linearly with the size of the time series, and provides efficient clustering, for these reasons it has been used as the basis of a large number of works on the filed \cite{sax_spawns}.
+%
+During the analysis of a time series, one often looks for sequences which carry particular significance. For example,
+anomaly search in time series is a particularly active research field \cite{Chandola}, among the many anomaly concepts, \cite{hotsax} introduced the idea of discords and proposed a pioneering method for finding them. A brute force discord search has an asymptotic complexity which scales as the square of the size of the time series, while HOT SAX \cite{hotsax} is a method which allows to greatly speed up the execution time. One of the limitations of discord search is that the length of the sequences is an input parameter, however a priori a researcher does not know the length of an anomaly. In order to overcome this problem it has been proposed to use the Kolmogorov complexity of the symbolic sequences obtained with the SAX procedure to define a new concept of anomaly called RRA which  produces similar results compared to discord search \cite{grammarviz2} \cite{senin} and it also has the advantage of being much faster than HOT SAX.  At the other side of the spectrum one might be interested in finding repeated patterns in a time series, for example in the form of motifs \cite{motifs0}  \cite{motifs} \cite{motifs2}.
+
+
+Many of the indicators which allow to characterize a time series are obtained by calculating the Euclidean distance between the sequences of a time series, and in fact the number of calls to the distance function is often employed for assessing the speed of an algorithm \cite{senin}. In this respect a complete knowledge of the distances of all the sequences introduces a wealth of information which can be subsequently used for different primitives. Following this perspective the articles of the Matrix Profile series \cite{matrix1} \cite{matrix2} proposed very fast algorithms which allow to determine the distance between all the sequences of a time series. However, part of the information retrieved with a complete matrix profile is not expected to be necessary, for example one is usually interested in knowing the closest neighbors, while, e.g. the distance with the 100th closest neighbor does not prove to be very informative. 
+In this article we thus provide an approach which allows to obtain an approximate nearest neighbor profile (formally defined in Sec. \ref{sssec:term}) for all the sequences of a time series, which, at variance to the whole matrix profile is just the set of all the distances between a sequence and its closest neighbor. With a good quality $nnd$ profile, it is possible to make quantitative statistical assessments regarding the properties of the time series and obtain new forms of indicators such as the one defined in \cite{sod}. 
+
+
+
+%In a previous article we have introduced a concept called \textit{significant online discords}, which is suitable for finding anomalies in an online context.
+%Although the concept of nearest neighbor distance of a sequence is rather intuitive, we will formally detail it in Sec. \ref{sssec:term}.
+%One of the limits of \textit{sod} search is the necessity to calculate the full $nnd$ profile of each queue. As a result we introduce here a procedure for finding the $nnd$ profile much faster than the brute force approach.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% 
+
+
+
+
+
+
+
+\section{Three different topologies}\label{sec:stat}
+%
+In this section we detail three topologies of a time series (intended as notions of neighborhood):
+%
+\begin{itemize}
+\item the Euclidean topology: which determines the values of $nnd$
+\item the SAX topology: which is based on dimensionality reduction and provides a quick grouping within symbolic sequences   
+\item the time topology: which is naturally determined by the position of the points of a time series
+\end{itemize}
+
+
+
+\subsection{Topology induced by the Euclidean metric} \label{ssec:Euclidean}
+The Euclidean distance between two sequences provides useful insights regarding their similarity. In particular, if one considers a sequence of $s$ points as a $s-$dimensional vector, it becomes straightforward to use the Euclidean distance to define clusters of sequences, and as a result, to find anomalies or recurrent patterns.
+%
+We denote with $S^{k}$ the sequence of length $s$, where the first point of the sequence is at time $k$. The $n^{th}$ point of the sequence $S^k$ is denoted as $s^k_n$. 
+According to this notation,
+ the Euclidean distance between two sequences ($S^k $ and $S^j $) is obtained with: 
+\begin{equation}
+ d( S^k , S^j ) = \sqrt{ \sum_{n=1}^{s} \left(s^k_n-s^j_n\right)^2  } 
+\end{equation}
+It is useful to remind that the order of neighbors (e.g. the nearest neighbor, the second nearest neighbor, ...) does not change by applying a monotone function to this quantity (only the nearest neighbor distance changes).
+%
+This in turn implies that the same nearest neighbor is obtained by using the Euclidean distance or, for example, the $d_2$ distance (where no square root is performed):
+
+$d_2({S^k},{S^j}) =  \sum_{n=1}^{s} \left(s^k_n-s^j_n\right)^2$. 
+
+
+\subsubsection{Terminology}\label{sssec:term}
+%
+\begin{itemize}
+\item  The \textit{nearest neighbor distance} of a sequence $S^i$ is defined as:
+\begin{equation}
+ nnd(S^i)=   \min_{j:|i-j|>s} d({S^i},{S^j}),
+\end{equation}
+where the index $j$ runs on all of the possible values within the search space $\mathcal{U}$, as long as they exclude self matches ($|i-j|>s$).
+%The discord is thus defined as the sequence for which the $nnd$ is maximum, so a prototypical discord is a sequence for which the closest neighbor is very far. 
+%
+% 
+%
+%A brute force algorithm for discord search requires two nested loops which run on all the sequences (and thus it is quadratic in time with the number of sequences). On the outer loop there is a search for the sequence with the maximum value of $nnd$.
+%For each sequence $S^i$ of the outer loop, the inner loop runs on all the sequences $S^j$ ($|j -i|> s$),  in order to find the $nnd(S^i)$ (this last one being a minimization procedure).
+%
+%
+The concept of non self match \cite{hotsax} is necessary to avoid ``spurious'' low values of $nnd$ because of partly overlapping sequences. 
+%
+%The discord sequence is the one with the highest value of $nnd$,
+%
+
+%q
+% It should be noted that the concept of discord is affected by the length of the sequence, this means that the search for discords of length 12 or 20 within the same time series can return different regions of the search space.
+% In this respect there are two important parameters which are left to the user: the length of the discords, and the amount of discords to be searched (the number of anomalies is, in fact, not known a priori).
+
+
+%
+% \begin{figure}[h!]
+% %\includegraphics[width=6cm]{disegni/nndProfile.eps}
+% %\includegraphics[width=6cm]{disegni/nndDistribution.eps}
+% \caption{ The $nnd$ profile of the first 20000 points of the ECG sequence \textit{300\_signal1.txt} is displayed in the left panel. For a given time t, we associate the sequence of length $l=56$ which starts in that point, and its $nnd$ value is shown.  On the right panel there is  the $nnd$ distribution of the same sequence. In order to obtain the distribution,  the minimum and maximum $nnd$ of the left figure are taken into consideration. The interval is then divided in 1000 bins and for each bin it has been counted the number of sequences whose $nnd$ falls in it. This quantity is then divided by the total number of sequences in order to have a normalized curve.  It is clear that the majority of the sequences have a $nnd$ value smaller than 100, while the discord sequence, starting at $i=15033$ has a $nnd$: $273.7$.} \label{fig:nnd}
+% \end{figure}
+
+%There are two useful concepts which help in analysing a time series:
+
+\item The \textit{nnd profile} is the set of all the possible $nnd$s of a given search space. An example of $nnd$ profile is displayed in Fig. \ref{fig:brute} (left).
+%
+%
+\item The \textit{nnd distribution} is obtained by dividing in  bins the range of all the possible $nnd$ values and counting the number of sequences which belong to each bin. As an example, the discord belongs to the righter-most bin, since, by definition, it has the highest $nnd$ value.
+\end{itemize}
+%
+It should be noted that the concept of discord is strictly linked to the search space $\mathcal{U}$ (the set of all the sequences on which the minimization takes place). In general, since the procedure for obtaining the \textit{nnd} of a sequence $S$ is a minimization process, an increase of the search space can only lead to a decrease of the $nnd$. In detail, given two search spaces such that $\mathcal{U}_1 \subset \mathcal{U}_2$ it is true that:
+\begin{equation}
+\underset{\mathcal{U}_1}
+  {nnd}(S) \geq \underset {\mathcal{U}_2}{nnd}(S).
+\end{equation}
+
+
+
+
+
+
+\subsection{SAX topology}\label{ssec:saxTopology}
+The SAX algorithm \cite{sax} allows to produce a quick clusterization of a time series.
+Two sequences can, in fact, be considered as neighbors according to the SAX topology, if they belong to the same cluster (a.k.a. symbolic sequence or s-sequence). 
+%
+%
+Notice that this topology is different from the one induced by the Euclidean distance, since two sequences can belong to two different SAX clusters (e.g. they are not close according to SAX), but they can be closest neighbors according to the Euclidean metric (and vice versa).
+%
+In order to understand this, it might be useful to summarize the SAX procedure:
+\begin{itemize}
+ \item each sequence is fragmented in sub-sequences of a given length (i.e. a $56$ points sequence can be divided in $7$ consecutive sub-sequences, each of $8$ points.
+ %
+ \item from each of these sub-sequences, the algebraic average value is extracted and collected (piecewise aggregate approximation or PAA). This technique allows to pass from a sequence to a reduced sequence (r-sequence) of points, where this r-sequence is smaller than the original one. Each point of the r-sequence is an average of the points of the original sequence.
+ %
+ \item all the possible values of the averages are further grouped in intervals (the number of intervals is the dimension of the alphabet associated to the SAX procedure) and each interval is assigned to a letter. 
+ %A careful choice of the intervals,  such that each of them contains the same number of averages, allows for an even distribution of the letters among the symbolic sequences (s-sequences).
+  
+For example, let's consider a sequence composed of 20 points; we decide to group them in 5 sub-sequences (each of 4 points). The corresponding  r-sequence contains only 5 points which are then converted into a 3 letters alphabet, where the letters are obtained with the following vocabulary: $[0,3]\rightarrow a$,  $[3,5)\rightarrow b$,   $[5,8]\rightarrow c$ (considering that all the points of the r-sequences lay in the interval $[0,8]$). As a result the sequence $34433013225661872103$ turns into the symbolic sequence $babca$:
+\end{itemize}
+
+ \begin{strip}
+% \begin{tabular}{ccccc}
+%    sequence  &  & r-sequence & & s-sequence \\
+% $34433013225661872103$ &$\rightarrow$& 3.5,          1.75,         3.75,     5.5,     1.5  &$\rightarrow$ &  $babca$ \\
+% \end{tabular}
+%\end{strip}
+
+\begin{center}
+\begin{tabular}{|c||c|c|c|c|c|}
+\hline
+sequence  &  3, 4, 4, 3,   &  3, 0, 1, 3,  & 2, 2, 5, 6,  &  6, 1, 8, 7, & 2, 1, 0, 3  \\
+\hline
+r-sequence &     14/4,     &      7/4,      &       15/4,    &     22/4,     & 6/4   \\
+r-sequence &       3.5,    &         1.75,    &       3.75, &      5.5,   &  1.5  \\
+\hline
+s-sequence &            b       &          a        &             b     &        c        &    a     \\       
+\hline 
+\end{tabular}
+\end{center}
+\end{strip}
+
+ 
+ 
+ 
+ 
+ %
+%\end{itemize}
+% For example, at the end of a SAX procedure with $3$ letters, a $56$ points sequence is turend into a $7$ letters sequence like: \textit{aabaccb}.
+Thanks to SAX, sequences giving rise to the same the symbolic sequence are naturally grouped together. The s-sequences are thus natural clusters for the sequences.   
+%
+
+
+% 
+
+%
+
+
+\subsubsection{Curse of dimensionality}\label{sssec:curse}
+Since the intervals defining the letters are ``sharp'', the nearest neighbor of a r-sequence close to the borders of its s-sequence (cluster) might be in a neighboring cluster.
+%Thus two close r-sequences might not be part of the same s-sequence.
+%
+% Moreover, as explained in Sec. \ref{ssec:saxTopology}, with the SAX procedure, the letters of a symbolic cluster are obtained by associating  averages of points to intervals.
+%
+A letter, in fact, does not bring the information regarding the fact that the average of points is close to the center or to the borders (where other letters begin).  
+%
+%Parallelotope, a n-dimensional parallelepiped:
+%\url{https://en.wikipedia.org/wiki/Parallelepiped}
+%
+
+\begin{figure*}
+ \includegraphics[width=0.499\textwidth]{disegni/ipercubo.eps}
+ \includegraphics[width=0.499\textwidth]{disegni/ipercuboVicino.eps}
+ \caption{(Left) A 3-dimensional parallelepiped corresponding to the symbolic sequence \textit{bbc}, and a point whose coordinates are averages  of the subsequences. (Right) The nearest neighbor of one point of the \textit{bbc} symbolic sequence is in the next cluster \textit{bcc}, this suggests that the sequences giving rise to those points might be closest Euclidean neighbors but belonging to different SAX symbolic sequences.}\label{fig:ipercubo}
+\end{figure*}
+
+
+
+A SAX cluster (symbolic sequence) of $n$ letters can be approximately seen as a hypercube (Fig. \ref{fig:ipercubo}), where each side corresponds to the interval of values defining a letter.
+%
+Actually, the object which correctly represents a SAX cluster is not a hyper-cube since the intervals don't need to have the same length. In reality this object is a $n$-dimensional parallelepiped or parallelotope (where $n$ is the number of letters of the sequence). However, since the reasoning related to a  hypercube does not modify the results but it simplifies the notation, in the following, we will keep on thinking in these terms.
+%
+For high dimensional spaces, most of the volume of a hypercube is close to its surface, i.e. the probability to find a randomly placed point close to the borders of the hypercube approaches one as the number of sides ($n$) increases to infinity.  %This in turn implies that, for most of the r-sequences, the nearest neighbor might lay in the next cluster.
+%
+In order to better understand this fact it is possible to divide the volume of the hypercube in two concentric parts: an internal hypercube and an external shell (which is just the difference between the whole hypercube and the inner one). 
+%
+It is easy to calculate the inner volume (where no point has coordinates within a small quantity, $\epsilon\ll l$, from one of the faces) since it is an hypercube whose side is $l-2\epsilon$. 
+The shell between the inner hypercube and the full one represents the volume where the points are close to the surface, while the inner hypercube is the region where the points are far form the surface. In a scenario of a random distribution of the points within the symbolic sequence, the volume of the shell is a good approximation of the probability of finding a sequence close to the surface of the symbolic sequences; vice-versa the volume of the inner hypercube represent the probability of finding a randomly placed point far from the surface. 
+%Instead of calculating the volume shell all we have to know is that it is the difference between the whole hypercube and the inner one.  
+%
+The ratio of the volume of the inner hypercube and the full one decreases geometrically with the dimension of the clusters:
+$$
+\frac{\mbox{inner volume}}{\mbox{volume}} = \left( \frac{l-2\epsilon}{l} \right)^n  
+\xrightarrow[]{n\rightarrow \infty} 0 
+$$
+This implies that, as the dimensionality grows, most of the volume is located in the external shell of the hypercube. A point belonging to this region must be close to at least one of its faces, and thus it is close to a neighbor hypercube.
+% %
+%Thus, long sequences are very likely to be close to the borders, this meaning that the neighbor of a long sequence has a high probability of being in a neighboring cluster.
+%
+%An immediate problem arises when applying this procedure and it is related with the fact that the curse of dimensionality comes into play, since the Euclidean nearest neighbor of a sequence might not be in the cluster, and it might be in one of its neighbor clusters. In particular this is true if the sequence is close to the border of the cluster. For a simplified view of the problem it is enough to think in terms of the number of neighbors of hypercube (it should be noted that also the cubes which share just a corner might contain the $nnd$ of a point). There are $3^n-1$ neighbor hypercubres where $n$ is the dimension of the cube. Just as a reference, one can think of sequences of length 10, in this case most of the points belonging to each SAX cluster are close to the border, since there are $59048$ neighboring clusters.   
+%
+From this perspective, the SAX topology becomes less and less likely to approximate the Euclidean topology as the length of the sequences increases, since most of the sequences will be close to the border of the SAX cluster and thus their closest neighbor might be in a neighboring SAX cluster.
+%
+Nonetheless it is natural to think that SAX neighbors are also likely to be Euclidean neighbors (this is in fact the idea at the basis of HOT SAX \cite{hotsax}).
+
+
+\subsection{Time topology}\label{ssec:timeTopology}
+By time topology we simply refer to how distant in time are the beginnings (or the ends) of two sequences, for example the nearest time-neighbors of ${S^i}$ are: ${S^{i-1}}$ and ${S^{i+1}}$.
+%
+In general the time distance between two sequences is simply:
+\begin{equation}
+ d_t({S^k}, {S^j})= |k-j|
+\end{equation}
+
+
+\section{Topology as a road-map to find the approximate $nnd$ profile.}\label{sec:algorithm}
+%The algorithm for obtaining the approximate $nnd$ profile comprises the following steps:
+
+The idea of this research to go beyond a brute force calculation, where one has to scan among all the Euclidean distances in order to find the nearest neighbor of a sequence. This can be achieved with a clever selection procedure which allows to reduce the total search space and thus the calculation time.
+This selection procedure is guided by the different topologies present in the time series, allowing to aim more precisely and reducing the problems related with the curse of dimensionality.
+
+Here we introduce the prescription to find the approximate $nnd$ profile for a quick implementation, in the rest of the section we will detail the reasons of the steps. For each sequence $S$:
+\begin{enumerate}
+% \item If a sequence belongs to a cluster of size $1$, perform a HOT SAX search related to that sequence (Sec. \ref{ssec:hotsax}).
+ \item Perform an extensive $nnd$ search within its own SAX cluster (Sec. \ref{ssec:extensive}).
+ \item Perform an extensive $nnd$ search within its own SAX cluster, where the size of the alphabet has been increased from $n$ to $n+1$, in respect to step 1 (Sec. \ref{ssec:sizeAlphabet}).
+  \item Execute a search based on time topology (Sec. \ref{ssec:time}).
+  %
+  %\item 
+   If the $nnd$ up to this point is lower than the current min($nnd$): analyse the next sequence (go to point 1 with the next sequence).
+  \item If the value $nnd$ obtained is higher than the current min($nnd$): scan the other clusters from the smallest to the biggest  until the $nnd$ drops below the current min
+  (notice that the order of the clusters to be scanned is chosen randomly, but if a scan begins within a cluster the whole cluster is scanned).
+\end{enumerate}
+%
+When this procedure is applied to all the sequences of the time series, it returns a good approximation of the $nnd$ profile, and since the search runs on an extended search space if compared with HOT SAX it is assured to find the discord of the time series. For improving the quality of the approximated $nnd$ profile this search should be repeated a number of times, in our case we find 10 times, thus finding the first 10 discords present.
+
+The quality of the approximated nearest neighbor profile obtained with this procedure will be analysed in Sec.~\ref{sec:validation}. 
+As a reference we will use the HOT SAX algorithm, and we will detail how to modify it in order to follow the procedure just outlined and the reason for these steps.
+
+\subsection*{HOT SAX}\label{ssec:hotsax}
+Let's consider the approximate $nnd$ profile obtained with an application of HOT SAX \cite{hotsax}.
+HOT SAX is a successful algorithm which allows to find anomalies in time series.
+%
+The idea of this algorithm is to find 
+those sequences which are particularly different (according to the Euclidean distance) from all the others: the \textit{discords}.
+% For this purpose it is useful to define a quantity, the \textit{nearest neighbor distance} of a sequence $S^i$ defined as:
+% \begin{equation}
+%  nnd(S^i)=   \min_{j:|i-j|>s} d(S^i,S^j),
+% \end{equation}
+% where the index $j$ runs on all of the possible values within the search space $U$, as long as they exclude self matches ($|i-j|>s$).
+The discord is defined as the sequence of the time series which has the maximum value of $nnd$.  
+%
+% 
+%
+A brute-force  discord search requires two nested loops (and thus it is quadratic in time with the number of sequences). The outer loop runs on all the sequences.
+%
+For each sequence $S^i$ of the outer loop, the inner loop runs on all the sequences $S^j$ ($|j -i|> s$),  in order to find the $nnd(S^i)$. The inner loop is the  minimization process needed to find the nearest neighbor. At the opposite, the external loop is a maximization procedure aimed at finding the sequence for which the $nnd$ is the highest.
+
+%
+%
+The discord sequence is the one with the highest value of $nnd$,
+%
+while the $k^{th}$ discord is defined as the sequence with the highest $nnd$ in a restricted search space, which excludes all the sequences which (partially) overlap with any of the previous ($k-1)^{th}$ discords. 
+%q
+%
+%The results of a search for anomalies with HOT SAX is affected by only two paremeters, namely the size of the sequences $s$ and the amount of discords to be found (while the other parameters affect only the execution speed of the algorithm).
+%
+The core idea of the HOT SAX algorithm is to provide a smart method to exit from the inner loop, in order to dramatically reduce the execution time. This is done by re-ordering both the inner and the outer loops.
+
+At the beginning a SAX clusterization is performed.
+The outer loop is re-ordered by positioning at first small (SAX) clusters and at the end the biggest ones. For each sequence of the outer loop, the minimization procedure (for finding the nearest neighbor distance of the sequence under observation) begins by scanning those sequences which are in the same SAX cluster, and for this reason they are good close neighbor candidates. If a cluster contains only few sequences, it can be seen as an almost empty space and it is a likely cluster for  discords.
+This reordering implies that, after a very few steps of the outer loop the system will have found a good discord candidate, i.e. a sequence with a high value of $nnd$. At this point as soon as the present $nnd$ value of a sequence (calculated in the inner loop) drops below the actual highest $nnd$ value, we are sure that that sequence cannot be a discord and it is possible to skip the rest of the minimization process.
+%
+
+
+The rationale of these choices is that small (SAX) clusters (in the limit containing only one sequence) are good places where to find anomalies. The $nnd$ of a sequence of a small cluster will likely be high (and it is better to search for it at the beginning in order to have high $nnd$ to confront with); while, on the contrary, big clusters of sequences will contain sequences with small $nnd$. 
+%
+%Moreover one expects that the probability to find the closest neighbor of a sequence in the same symbolic sequence should be high. 
+Once the first sequences have been calculated, since they are likely to be good discord candidates,  for the remaining ones, it will be very likely that the inner loop, quickly returns approximate $nnd$ values lower than the actual best discord candidate. At this point the rest of the inner loop can be skipped since we are sure that the sequence under investigation cannot be the discord.
+%
+These smart orderings, in practice, allow to skip most of the inner loops reducing greatly the complexity of the calculation. Clearly the execution speed depends on the time series under consideration, however this algorithm has proven to be extremely efficient in many practical cases.
+In practice HOT SAX is based on comparing two different kinds of topologies, the one induced by the Euclidean metric and the one of the SAX procedure. 
+
+
+%
+% It is interesting to note that, in essence, the algorithm becomes particularly fast when the time series can be clustered effectively with SAX, while in a time series where the sequences are distributed in many small clusters, the speed of the algorithm can considerably degrade (and for this reason the choice of the parameters of the SAX procedure are important).
+
+At the end of a HOT SAX calculation each sequence has an approximate neighbor (the one at the time of exiting the inner loop) which determines an approximated $nnd$. 
+An approximate profile obtained in this way as in Fig. \ref{fig:cluster} (left), however, is very different from the exact of Fig. \ref{fig:brute} (left). This is not a surprise, since the purpose of the algorithm is exactly to exit from the minimization procedure in order to avoid useless calculations.
+
+
+\subsection{Extensive $nnd$ search within the SAX cluster of origin }\label{ssec:extensive}
+Let's introduce here a modification of HOT SAX which produces a better $nnd$ profile. 
+%
+% Since sequences belonging the same cluster are likely Euclidean neighbors, once a sequence has been selected it is not necessary to calculate its distance with all the other sequences of the time series, but at the beginning it is enough to restrict the search space to the sequences of the  its cluster. This approximation, has a strong impact regarding the amount of distances to be calculated, however the approximate $nnd$ profile returned, if comprared with $nnd$ obtained with a HOT SAX approach there is a great improvement, however in respect to an exact calculation the results are not good. This is not surprising, since the idea of HOT SAX is exactly to exit the search for the nearest neighbor as soon as it is clear that a sequance cannot be a discord, thus the neighbors found within HOT SAX are very poor approximations in respect to the exact values.
+%
+Since the code exits from inner loop as soon as the $nnd$ of a sequence is below the current maximum, following the SAX-Euclidean topology connection, in order to obtain lower values of $nnd$, it is rather straightforward to force the calculation to continue for all the sequences of the same SAX cluster. 
+If the connection between SAX and Euclidean topology was perfect, this modification would assure to find the exact nearest neighbor of each sequence.
+This in practice cannot happen. The Euclidean distance does induce a notion of ``closeness'' however it does not define automatically a clusterization. %If for example one decided to define the open sets containing one sequence and its closest neighbor, as a result it would obtain overlapping sets (while those of the SAX procedure are built to have an empty intersection). 
+
+%The fact that two close Euclidean sequences are likely to belong  to the same SAX cluster, implies that, in quite a number of cases, by scanning all the sequences of the SAX cluster of origin, it is expectable to find the exact nearest neighbor (and consequently the correct $nnd$ associated).
+%
+% The resulting modification implies:
+% %
+% %
+% \begin{itemize}
+%  \item a $nnd$ profile which is closer to the correct one than the $nnd$s of HOT SAX (since the search space for each sequence is increased in respect to HOT SAX).
+%  \item longer processing times than HOT SAX since the search does not stop as soon as the sequence is surely not a discord.
+% \end{itemize}
+%
+%
+The rationale of scanning the whole cluster where the sequence belongs, is that, if the sequence under investigation is close to the center of the SAX cluster, the Euclidean neighbor has a high chance of being within the cluster itself.
+%
+This procedure, is likely to return the exact nearest neighbor for sequences which are common within the time series (and thus belong to big clusters). 
+
+
+\subsection{Modifying the size of the SAX alphabet}\label{ssec:sizeAlphabet}
+Because of the curse of dimensionality (Sec. \ref{sssec:curse}), for r-sequences near the border of their cluster there is a high chance that the closest neighbors might belong to a different s-sequence.  
+%
+
+There is a first easy cure for this problem. It is possible, in fact, to apply the SAX procedure two times in order to produce different symbolic sequences. For example the second time increasing  by 1 the number of letters of the alphabet for the symbolic representation. This prescription, in fact, moves the borders among the letters, so r-sequences close to the borders have a high probability of being relocated in other clusters (and maybe containing their true neighbors). 
+%
+Let's consider a context where the alphabet contains three letters associated to the following intervals: $[0, 3)  \longrightarrow  a$; $[3, 5)  \longrightarrow  b$; $[5,8]   \longrightarrow  c$.
+% \begin{itemize}
+%  \item $[0, 3)  \longrightarrow  a$
+%  \item $[3, 5)  \longrightarrow  b$
+%  \item $[5,8]   \longrightarrow  c$
+% \end{itemize}
+%
+% For example if the interval $[0,10]$ contains the averages of the points and it is didived in a 3-letter alphabet, the interval might be: $\left\{ [0,2), [2,5), [5,10] \right\}$.
+%
+If the second coordinates of two r-sequences are respectively $2.99$ and $3.01$ the corresponding letters would be $a$ and $b$ (although these coordinates are very close). In practice:
+\begin{equation}
+ \left(
+   \begin{tabular}{c}
+       3.95 \\
+       2.99 \\
+       7.21
+   \end{tabular}
+ \right)
+ \rightarrow
+  \left(
+   \begin{tabular}{c}
+       b \\
+       a \\
+       c
+   \end{tabular}
+ \right)
+ ;
+ \left(
+   \begin{tabular}{c}
+       3.82 \\
+       3.01 \\
+       7.38
+   \end{tabular}
+ \right)
+ \rightarrow
+  \left(
+   \begin{tabular}{c}
+       b \\
+       b \\
+       c 
+   \end{tabular}
+ \right)
+\end{equation}
+
+
+
+By using an alphabet of 4 letters, however, the intervals associated to each letter would move and the two points would likely be associated to the same letter, thus increasing the probability to find the Euclidean nearest neighbor within the same cluster:
+$[0, 2) \longrightarrow a $; $[2, 4) \longrightarrow b $; $[4, 6) \longrightarrow c $; $[6, 8] \longrightarrow d $.
+%
+% \begin{itemize}
+%  \item  $[0, 2) \longrightarrow a $
+%  \item  $[2, 4) \longrightarrow b $
+%  \item  $[4, 6) \longrightarrow c $
+%  \item  $[6, 8] \longrightarrow d $
+% \end{itemize}
+%
+The new symbolic sequences associated to the two r-sequences are:
+\begin{equation}
+ \left(
+   \begin{tabular}{c}
+       3.95 \\
+       2.99 \\
+       7.21
+   \end{tabular}
+ \right)
+ \rightarrow
+  \left(
+   \begin{tabular}{c}
+       b \\
+       b \\
+       d
+   \end{tabular}
+ \right)
+ ;
+ \left(
+   \begin{tabular}{c}
+       3.82 \\
+       3.01 \\
+       7.38
+   \end{tabular}
+ \right)
+ \rightarrow
+  \left(
+   \begin{tabular}{c}
+       b \\
+       b \\
+       d 
+   \end{tabular}
+ \right)
+\end{equation}
+%
+Notice that changing the size of the alphabet used for the symbolic representation does not change the sequence under investigation, in this way each sequence belongs to two (or more if applied many times) different SAX clusters, where the probability to find the closest Euclidean neighbor increases.
+This procedure, in practice, increases the size of the search space where we can apply the minimization for finding the $nnd$ of each sequence, thus increasing the probability to find a good approximation of the exact value.
+%
+The drawback of this procedure is to further slow down the search (since it increases the search space for each sequence). Since the two clusters might contain overlapping sequences it is useful to keep track of the ones already checked in the first part of the algorithm and avoid doing the same calculations two times. 
+
+
+\subsection{Time for a more accurate search}\label{ssec:time} 
+By applying the steps of Sec. \ref{ssec:extensive} and Sec. \ref{ssec:sizeAlphabet} it is possible to obtain a $nnd$ profile which becomes  closer to the exact one, however it is possible to notice that there is still quite a big number of ``suspicious'' spikes, for example in Fig.~\ref{fig:time} (left).
+Up to this point we have been exploiting the connection between SAX and Euclidean topology. For a further improvement of the $nnd$ profile,  it could be tempting to perform an extensive search also on the neighboring SAX clusters. This approach however has two main problems.
+\begin{itemize}
+ \item the curse of dimensionality implies that the number of neighboring clusters grows geometrically, and there is no simple technique to understand if any of them is better than the others.
+ \item the amount of sequences to be searched becomes very big thus rendering the approximate search not valuable.
+\end{itemize}
+As a solution we propose to exploit the time topology, which, at this point, can provide useful suggestions regarding the position of close neighbors for each sequence. 
+%
+Let's consider the nearest neighbor distance as a function of the index of the sequence $i$, $nnd(S^i)$, where $i$ runs over all sequences of the time series.
+%
+If the time series shows a certain degree of regularity, we can expect that also $nnd(S^i)$ should be pseudo-smooth (but for the points where there are true anomalies). By pseudo-smooth we mean that, it is possible to obtain upper bounds for $nnd(i+1)$ as a function of $nnd(i)$.
+The reason is rather simple, and in order to show it we will make use of the $d_2$ distance instead of the Euclidean one, since it allows to get rid of the square root (but the order of the distances does not change).
+%
+We will denote with $p_i$, where $i$ is the time, the single points of the time series. With this notation, if the length of the sequences is $s=10$, the last point of sequence $S^{43}$ is $p_{52}=s^{43}_{10}$.  
+Let's consider a sequence, $S^i$, and its Euclidean nearest neighbor located, for example, at time $i+k$ (where $k$ is higher than the length of the sequence $s$, to prevent a self-match condition), in this case
+ $nnd(S^i)=d_2(S^i, S^{i+k})$. The nearest neighbor distance of the next sequence, $S^{i+1}$, is related with $nnd(S^i)$, by Eq \ref{eq:smooth}.  
+\begin{strip}
+ \begin{equation}\label{eq:smooth}
+ nnd(S^{i+1}) \leq d_2(S^{i+1}, S^{i+k+1}) \leq nnd (S^i)+ (p_{i+s} - p_{i+s+k})^2 - (p_i-p_{i+k})^2,
+ \end{equation}
+ \end{strip}
+ %
+ \begin{itemize}
+\item The first inequality of Eq. \ref{eq:smooth} holds because, by definition, $nnd(S^{i+1})$ is the minimum among all the distances between $S^{i+1}$ and all the other sequences of the time series.
+\item the second inequality is true because of the definition of the $d_2$ distance function, which is a summation of squares: $d_2(S^i,S^{i+k})= \sum_{j=1,s} (p_{i+j}-p_{i+k+j})^2$ 
+%\end{itemize}
+%
+. If one compares the two distances:\\
+% \begin{eqnarray*}
+% d_2(S^{i}, S^{i+k} )  =  \left( p_{i} - p_{i+k} \right)^2 +
+%                              \left( p_{i+1} - p_{i+k+1} \right)^2 +
+%                              ... 
+%                              \left( p_{i+s-1} - p_{i+k+s-1} \right)^2 \\ 
+% %$$
+% %
+% %$$
+% d_2(S^{i+1}, S^{i+k+1} )  =  \left( p_{i+1} - p_{i+k+1} \right)^2 +
+%                              \left( p_{i+2} - p_{i+k+2} \right)^2 +
+%                              ... 
+%                              \left( p_{i+s} - p_{i+k+s} \right)^2, 
+% \end{eqnarray*}
+%
+%
+%
+\begin{strip}
+\scalebox{1.0}{
+\begin{tabular}{cccccc}
+$ d_2(S^{i}, S^{i+k} ) $ = & $  \left( p_{i} - p_{i+k} \right)^2 +$
+                           & $   \left( p_{i+1} - p_{i+k+1} \right)^2 +$
+                           &  ... 
+                           &  $+\left( p_{i+s-1} - p_{i+k+s-1} \right)^2$ 
+                           &   \\
+                           
+                           
+$d_2(S^{i+1}, S^{i+k+1} )$  = &
+                              & $\left( p_{i+1} - p_{i+k+1} \right)^2 +$
+                              %& $\left( p_{i+2} - p_{i+k+2} \right)^2  $
+                              & ...
+                              & $+\left( p_{i+s-1} - p_{i+k+s-1} \right)^2$ 
+                              & $+\left( p_{i+s} - p_{i+k+s} \right)^2,$
+\end{tabular}
+}
+\end{strip}
+It is easy to notice that the first and the last addend are the only differences between the two distances.
+\end{itemize}
+%
+In detail the value of $(p_{i+s} - p_{i+k+s})^2 - (p_i-p_{i+k})^2$ in Eq. \ref{eq:smooth} determines whether the inequality implies a strict limit or not. Since, by definition, the sequences beginning at time $i$ and at time $i+k$ are the closest neighbors, it seems reasonable to expect that the parts of the time series which follow these two sequences might resemble each other and thus be close in terms of Euclidean distance. At this point we have noticed that time topology can provide a good hint on where to search for nearest neighbors, once an approximate $nnd$ profile is already present.
+
+This reasoning follows the same basic idea of the HOT SAX procedure applied to a different topology, i.e. to search the Euclidean neighbors in restricted search spaces where it is more reasonable to find them. 
+%
+%A tong twister summary of the procedure is:\\
+%In this case it would be possible to summerized the procedure as: \\
+With a motto, a sequence could ``say":\\
+
+\textit{The Euclidean-neighbor of my time-neighbor, is likely to be a time-neighbor of my Euclidean neighbor}. \\
+
+\begin{figure}[h!]
+%\includegraphics[width=12cm]{disegni/dual-topology5.eps}
+\includegraphics[width=0.499\textwidth]{disegni/dual-topology6.eps}
+\caption{Different kinds of neighborhood: (top figure) Sequence $S^{8}$ and $S^{8}$ are time-neighbors (but they belong to two different SAX clusters, the red and the green one). Sequence $S^{8}$ and $S^{8+22}$ belong to the same SAX cluster (the red one), moreover this latter sequence is the closest Euclidean neighbor of the former. Sequence $S^{9}$ (because of the curse of dimensionality) does not belong to the same cluster as its closest Euclidean neighbor, $S^{9+22}$, and there would be no reason to check the distance of the two, however (bottom figure) thanks to the following passages: 
+$S^{9} 
+\xrightarrow[]{\text{time}} 
+S^{9-1}
+\xrightarrow[]{\text{SAX}}
+S^{9-1+22}
+\xrightarrow[]{\text{time}}
+S^{9-1+22+1}
+$
+%$S^{10} \longrightarrow S^{9} \longrightarrow S^{9+22} \longrightarrow S^{10+22}$
+%
+it is likely that $S^{16}$ and $S^{38}$ will be Euclidean neighbors.
+%
+%
+}\label{fig:topology}
+\end{figure}
+
+% Let's suppose to be in the case where:
+% %
+% \begin{equation}
+%  nnd(S^i) < nnd(S^{i+1})
+% \end{equation}
+% and 
+% \begin{equation}
+%  nnd(S^{i+1}) > nnd(S^{i+2})
+% \end{equation}
+% 
+% $$
+% nnd(S^{i+1}) \leq
+% \left\{
+% \begin{tabular}{c}
+%  $d(S^{i+1}, S^{i+k+1})\approx nnd(i)+c $ \\
+%  $d(S^{i+i}, S^{i+k}) $\\
+% \end{tabular}
+% \right.
+% $$
+%
+% Nonetheless in line with the reasoning that close sequences belong to the same symbolic representation one can expect that this quantity (the distance found when exiting the loop) is not too far from the real neighbor distance.
+%
+%Moreover if one is concerned in the statistical properties of all the sequences, the binning procedure renders less important to obtain the exact value of the $nnd$.
+%
+An example of the utilization of the procedure is shown in Fig. \ref{fig:topology}, and here synthesized:
+\begin{itemize}
+ \item $S^{8}$ is a sequence of length $8$. Its Euclidean neighbor has been found within those sequences which share the same same SAX cluster, in particular is $S^{8+22}$.
+ 
+ \item the (approximate) $nnd$ of sequence $S^{9}$ (which is the time-neighbor of $S^{8}$) among its SAX neighbors, is much higher than $nnd(S^{8})$, not following the constraints of Eq.~\ref{eq:smooth}. 
+ This is suspicious, since we expect the $nnd$ profile to be rather smooth (but for the anomalies).
+
+ \item $S^{9+22}$ does \textit{not} belong to the same SAX cluster as $S^{9}$ (it belongs to a neighbor cluster, due to the curse of dimensionality). SAX clustering, in this case, does not provide good suggestions on where to search for a good Euclidean neighbor of sequence $S^{9}$.
+
+ \item however, thanks of the time topology it is possible to say that $S^{9-1+22+1}$ is a good candidate for being a close Euclidean neighbor of $S^{9}$ as shown in Fig. \ref{fig:topology} (the summation of the index of the possible neighbor sequence has not been carried out in order to emphasize the three passages to obtain it: time, SAX, and time again).
+\end{itemize}
+%
+Clearly it is possible to check on both time directions in order to improve the quality of the results. It is also possible to do more loose checks where one takes into account, not just the first time neighbors, but also more distant sequences (10 in the present article).
+% 
+Actually in the present implementation we select the sequences to be checked with a simple heuristic, namely only if the $nnd$ calculated up to that point presents a non-smooth behavior (i.e. Eq. \ref{eq:smooth} is not respected) the time topology is utilized.
+
+
+\begin{figure*}[!t]
+ \includegraphics[width=0.499\textwidth]{disegni/HSonly.eps}
+ \includegraphics[width=0.499\textwidth]{disegni/HSonlyCluster.eps}
+ \caption{(Left) Approximate $nnd$ profile for all the sequences, obtained with HOT SAX. (Right) The $nnd$ profile obtained by extending the search space in order to include the whole cluster where each sequence belongs.}\label{fig:cluster}
+%\end{figure}
+%
+%
+%\begin{figure}[!t]
+ \includegraphics[width=0.499\textwidth]{disegni/HSonlyClusterP1.eps}
+ \includegraphics[width=0.499\textwidth]{disegni/HStime.eps}
+ \caption{(Left) Approximate $nnd$ profile, obtained with the extended search space including two different kinds of SAX clusters (with 3 and 4 letters alphabets respectively). (Right) The $nnd$ profile calculated including also the time-topology.}\label{fig:time}
+%\end{figure}
+%
+%\begin{figure}[!t]
+ \includegraphics[width=0.499\textwidth]{disegni/Brute.eps}
+ %\includegraphics[width=0.499\textwidth]{disegni/nndPdf.eps} 
+ \includegraphics[width=0.499\textwidth]{disegni/differenze.eps} 
+ \caption{(Left) Brute force calculation of the exact $nnd$s of each sequence. (Right) Both the exact (red line) and approximated (blue line) $nnd$ profiles. 
+ }\label{fig:brute}
+\end{figure*}
+%
+%
+%
+%
+\begin{figure*}
+\includegraphics[width=0.499\textwidth]{disegni/rapportoTempi.eps}%
+\includegraphics[width=0.499\textwidth]{disegni/nndPdf.eps} 
+\caption{(Left) Ratio of the execution speed of the brute force algorithm and the topological approach for calculating the $nnd$ profile as a function of the size of the time series to be analysed. In particular we analysed chunks of increasing size of \textit{ECG300}.
+ %
+(Right) The topologically approximated $nnd$ distribution and the exact one are very similar, and shown here along with their difference. The interval of $nnd$ values spans from about $0$ to about $1400$, in order to improve readability, in this picture, we show values of $nnd$ up to $231.3$ since they exhaust 99.5\% of the cumulative distribution function, and they allow to see the main differences between the two distributions.
+} \label{fig:velocita}
+\end{figure*}
+
+
+
+% In detail the implementation of the topological search works like this.
+% Let's consider a sequence $S^{i}$ and its actual nearest neighbor $S^{j}$
+% \begin{itemize}
+%  \item check $nnd(S^{i})$ 
+%  \item check $nnd(S^{i})$ 
+% \end{itemize}
+% 
+% 
+% 
+% 
+% For each sequence of the outer loop:
+% \begin{enumerate}
+%  \item check the distance with all the points which are in the same
+%  \item check the distance with all the points of the same cluster (with a different alphabet size in respect to the first one)
+%  \item if the approximate $nnd$ at this point is greater than the max $nnd$ up to that point: scan the other clusters (randomly), until the $nnd$ drops below the current max.
+% \end{enumerate}
+
+
+
+
+
+
+%  https://github.com/dwicke/TSAT
+
+
+
+\section{Validation}\label{sec:validation}
+In this section we evaluate to which extent the exact $nnd$ profile can be matched with the topologically approximated one, and what is the gain in terms of speed.
+% Sec. \ref{sec:stat}.
+%
+% The chi-squared distribution is very useful in this case. 
+% \begin{equation}
+%  \chi^2 = \sum_{i} r_i^2   
+% \end{equation}
+% where $r_i$ are distributed like $N(0,1)$.
+% For values of $k > 50$ the distribution is approximated with a normal distribution.  
+% 
+% In the following, as a comparison the parameter for the online search are set in a way to match a batch calculation (i.e. one present queue only, with a size identical to the whole time series). This is done in order to obtain a standard way to compare the profiles the results obtained with by including different steps of the algorithm.
+%
+In detail, let's consider the $nnd$ profile obtained in five different cases, where each search space includes the previous one:
+\begin{enumerate}
+\item The approximate $nnd$ values resulting from the application of the HOT SAX algorithm is shown in Fig. \ref{fig:cluster}  (left). 
+%
+\item Extending the $nnd$ search to all the sequences of the same cluster produces the approximate $nnd$ of Fig. \ref{fig:cluster} (right).
+%
+\item Extending the $nnd$ search to all the sequences of the cluster obtained by using one more letter in the alphabet returns the $nnd$ profile of  Fig. \ref{fig:time} (left).
+
+\item Using also the time topology for the $nnd$ search provides a clear improvement as of Fig. \ref{fig:time} (right).
+\item The results of the exact calculation associated to the brute force algorithm is in Fig. \ref{fig:brute} (left).
+\end {enumerate}
+In Fig. \ref{fig:brute} (right) we show both the exact and the topologically approximate $nnd$ profiles for a direct visual comparison.
+%
+The time series under consideration, \verb|ECG300|, belongs to the Physionet database \cite{physio}. It is
+the ECG of a person, sampled 536976 times. In the pictures, for a better readability of the images we limit the series to 210000 points (however when taking into account the accuracy of the approximation we take into account all the points). 
+The parameters of the HOT SAX search are:
+\begin{itemize}
+ \item sequence length:  56 points 
+ \item alphabet size: 3 letters
+ \item 8 points are used to form one letter (which implies that each sequence/cluster of 56 points contains 7 letters).
+\end{itemize}
+
+
+
+
+
+
+
+\begin{figure*}[!t]
+ \includegraphics[width=0.499\textwidth]{disegni/confronto-T-SAX.eps} 
+ %\caption{Detail of the $nnd$s obtained after applying the three topology search (blue) and using two SAX clusters (red).}\label{fig:T-vs-C}
+ %
+ \includegraphics[width=0.499\textwidth]{disegni/confronto-T-Brute2.eps}  
+ 
+ \caption{(Left) Detail of the $nnd$s obtained after applying the three topology search (blue) and using two SAX clusters (red).
+ %
+ (Right) Detail of the $nnd$s obtained with the exact calculation (gray) and after applying the three topology search (blue).}\label{fig:T-vs-B}
+%
+\end{figure*}
+
+
+It is clear that the approximate $nnd$ profile returned by HOT SAX (Fig. \ref{fig:cluster} on the left) is useless for obtaining statistics. This is normal, since the approach of HOT SAX is to skip all the calculations which are not necessary for finding discords, and not to try to produce good quality $nnd$s.
+%
+A clear improvement appears if we modify HOT SAX, by forcing it to run over all the sequences of the s-sequence associated to a sequence, as in Fig. \ref{fig:cluster} (right). In this case, the algorithm does not exit the loop as soon as the current value of the $nnd$ drops below the actual best discord candidate (as it would do with a normal application of HOT SAX), but it keeps on updating the $nnd$ associated to the sequence.
+Unfortunately, because of the curse of dimensionality we can also expect that many sequences with small Euclidean distance should be present in neighbor SAX clusters, but the number of such clusters grows exponentially with the length of the sequences. An easy remedy is to perform two times the SAX procedure with two different alphabets, i.e in the present example we explored SAX clusters obtained with 3 letters and with 4 letters. With this approach each sequence belongs to two different clusters (s-sequences), moreover, since the range where the letters are chosen passes from even to odd (or vice versa), it seems reasonable that some of the neighbors of the r-sequence, which were just outside of the borders of the first SAX cluster might fall inside the second SAX cluster. It is worth remembering that the clusters are based on the r-sequences, and this induces further uncertainty regarding the fact that two sequences belonging to the same SAX cluster are also Euclidean neighbors.
+%
+In Fig. \ref{fig:time} (left) there is the result of this extension which shows a clear improvement of the $nnd$s (we remind that the approximate $nnd$s are always greater or equal to the exact ones, since the only difference among the two is related to the search space where the minimization takes place, which is restricted in the case of the approximate values).
+%
+At this point one has obtained a good approximation of the $nnd$ profile, however with a detailed comparison of the approximate $nnd$s and the exact ones, Fig. \ref{fig:T-vs-B} (left), it is possible to notice that the former profile presents many spikes, while the exact profile is more ``smooth''. This is an indication that the curse of dimensionality is still creating problems and another search mechanism need to be introduced. The three topology idea fits perfectly this approach and, by extending the search as per Sec.~\ref{ssec:time}, one obtains the $nnd$ profile of Fig. \ref{fig:brute}~(right) which is very close to Fig.~\ref{fig:brute} (left).
+At the end, in figure \ref{fig:time} (right) we compare the exact and the topologically approximated $nnd$ profile.  
+
+
+% If one is interested in the $nnd$ distribution, as in the case of \textit{sod} search, it is clear that the time topology becomes necessary, otherwise the $nnd$ distribution would be skewed to the right in respect to the exact one, because of the many $nnd$ values bigger than the exact ones.
+%
+% When confronting the two $nnd$ profiles of Fig. \ref{fig:brute} (right) one has to take into account that, although for the vast majority of the sequences there is no difference, those which are different are particularly visible, because of the high density of points. 
+
+In order to better understand whether the $nnd$ distributions obtained with the topological approximation and the exact one are related we show them in Fig. \ref{fig:velocita}. In this case we divided the values of the possible $nnd$s in 1000 bins and we created a probability $nnd$ distribution for both of the cases. The difference among the two distributions is also shown. The topologically  approximated $nnd$ distribution is so close to the exact one that it can replace it for practical purposes, and in particular when searching for statistical properties of the $nnd$ profile \cite{sod}.
+
+%
+Fig. \ref{fig:T-vs-B} (left) shows a detail of the $nnd$ profile calculated with and without the time topology. It is clearly visible a high number of spikes which correspond to poor quality values of the $nnd$. 
+When passing from the topologically approximated $nnd$ to the exact one as in 
+ Fig. \ref{fig:T-vs-B} (right), it is particularly visible that the differences are more limited both in terms of quantity and magnitude.
+
+For a quantitative evaluation of the topologically approximated $nnd$ profile we counted the amount of exact $nnd$s calculated over the total. In the case of ECG300 the exact $nnd$ value has been obtained for 98\% of the sequences. The average fractional error of the approximated $nnd$s has been obtained as:
+\begin{equation}\label{eq:err}
+Err= \frac{1}{N_a}\sum_{i=1}^{N}  \frac{ nnd_a(S^{i})  - nnd(S^{i})} {nnd(S^{i})} =   3.1\cdot 10^{-2}
+\end{equation}
+Where  $nnd_a(S^i)$ is the approximated $nnd$ value associated to the sequence $S^i$, and $N_a$ is the amount of sequences for which only an approximated $nnd$ has been found (2\% of the total number of sequences). Notice that there is no reason to use the absolute value, since $nnd_a(S^i) \geq nnd(S^i) ~\forall i$, the approximated distances are in fact always greater or equal than the exact ones (and in the present case there are no sequences for which the $nnd$ is exactly $0$). In most of the cases (usually around 99\% of the sequences), the numerator of Eq. \ref{eq:err} is zero. In Table \ref{tab:validation} we show the results of the application of the topologically approximated $nnd$ profile for other time series. 
+
+
+\begin{table}
+ \begin{tabular}{cccc}
+file name &  \%of exact $nnds$  &        Err  &   speedup \\
+$sel0606_2$    &  0.996   &  0.05          &    83  \\
+$sel0606_3$    &  0.995   &  0.05          &   116  \\
+$sel102_2$     &  0.988   &  0.05          &    40  \\
+$sel102_3$     &  0.997   &  0.06          &    26  \\
+$sel123_2$     &  0.988   &  0.05          &    32  \\
+$sel123_3$     &  0.992   &  0.04          &    14  \\
+$bidmc15_2 $     &  0.996   &  0.15          &     5  \\
+$bidmc15_3 $     &  0.998   &  0.09          &    30  \\ 
+$bidmc15_4 $     &  0.984   &  0.05          &    40  \\ 
+$bidmc15_5 $     &  0.989   &  0.06          &    58  \\ 
+ \end{tabular}
+ \caption{Comparison of the results of the application of the topologically approximated nearest neighbor distance profile to real time series \cite{physio} and a brute force calculation.
+ The files $sel$ contain 225000 points, while the $bidmc15$ series 60000. The subscripts ($_2$, $_3$, $_4$ and $_5$) refer to the column of the files under investigation, second, third, etc.
+ The speedup is obtained as the ratio of the number of calls of  the brute force algorithm and the number of calls of our approximated algorithm.}
+ \label{tab:validation}
+\end{table}
+
+
+
+
+
+% These results indicate that the approximated $nnd$ is very close to the exact one, and it becomes particularly useful in case one is interested in calculating the \textit{significant online discords} (sod) rather than just discords. A sequence is a sod \cite{sod} if it follows two distinct requirements, it is a discords, and its $nnd$ value is an outlier in respect to the set of all the $nnd$s. By using the approximated nnd values just obtained the calculation of sods becomes much faster and its utilization for streaming time series allows for much higher frequencies.
+
+
+
+
+
+
+
+
+% 
+% 
+% \subsection{To be checked}
+% It should be noticed that, when checking the value of the last occupied bin  of the statistics (which contains at least the discord), the percentage of points there contained is a function of the size of the present queue (from the statistical point of view). For example in the case of the time series:
+% \textit{300\_signal1.txt} we obtain:
+% 
+% \begin{table}[h]
+% \begin{center}
+% \begin{tabular}{|c|c|c|}
+% \hline
+%  size of the queue &   average value of the last bin \\
+%  \hline
+%  500   &  0.1\\
+%  \hline
+%  1000  &  0.04   \\
+%  \hline
+%  2000  &  0.018   \\
+%  \hline
+%  4000  &  0.01   \\
+%  \hline
+%  \end{tabular}
+%  \end{center}
+%  \end{table}
+%  These values seem to indicate that the product of the number of elements of the queue analyzed and the fraction of elements present in the last bin might be almost constant.
+%  {\bf 
+%  I need to check if this is the case also for other time series.
+%  If I find a constant value this could help me.}
+%  %
+%  This implies that selecting a constant value for the \textit{significance threshold} is not meaningful.
+%  Moreover I noticed that the last bin, often is enhanced in respect to the previous 
+%  bins, thus considering cases in which the last bin is not below the threshold might not be correct.
+
+
+
+
+
+
+\section{Conclusions and future works}\label{sec:conclusions}
+
+When analysing time series, a $nnd$ profile can be useful in order to understand the structure of the sequences and to find out possible anomalies in the form of discords or recurrent sequences.
+Unfortunately a full \textit{nnd} profile requires calculations which scale quadratically with the size of the time series. In the present article we propose a procedure which can speed up the process greatly. In particular the idea followed in this article is to exploit different kinds notions of neighborhood for each sequence in order to constrain the calculations to  search spaces where the probability to find the exact neighbor is very high. The three topologies are: the one introduced by SAX, the time topology and the Euclidean topology.
+
+The time topology allows to express a bounding limit (Eq. \ref{eq:smooth}) to the $nnd$ value of a sequence.
+
+
+Instead of calculating the distance of all the sequences one selects only those which are more likely to be close neighbors to each sequence. This is a heuristic selection procedure,  thus it is not possible to provide exact bounds in term of computation complexity. The experimental results we obtained on real data times series provide very interesting results where the speed-ups in respect to a brute force algorithm are between  1 and 2 orders of magnitude. There is a clear trend indicating that the ratio between the brute force computational time and the computational time obtained with time topology increases with the size of the time series under observation and for this reason our approach becomes particularly appealing with large time series. 
+
+The resulting $nnd$ profiles are very close to the exact one (in the cases under observation for more than 98\% of the sequences  it has been found the exact $nnd$).
+Future works include the application of MASS algorithm which exploits the Fast Fourier Transform to speed up the calculation of the distances \cite{mass} which is at the basis of \cite{matrix1}, and it is known to greatly speed up the calculation of distances between sequences.
+
+
+
+
+\bibliographystyle{apalike}
+{\small
+\bibliography{biblio}}
+
+
+% % 
+% %    
+% % \bibliographystyle{splncs}
+% % % 
+% \begin{thebibliography}{10}
+% \bibitem{aggrawal}
+% Aggarwal CC (2007) Data streams: models and algorithms. Springer, Advances in Database System, vol 31. Berlin.
+% 
+% \bibitem{clustertimeseries}
+% Aghabozorgi S, Shirkhorshidi AS, Wah TY (2015) Time-series clustering - A decade review. Information Systems Volume 53, October-November 2015, Pages 16-38.
+% 
+%  
+% \bibitem{htmanomaly}
+% Ahmad S, Lavin A, Purdy S, Agha Z (2017) Unsupervised real-time anomaly detection for streaming data. Neurocomputing 262 (2017) 134–147, ISSN 0925-2312, \url{https://doi.org/10.1016/j.neucom.2017.04.070}
+% 
+% 
+% 
+% 
+% \bibitem{surveillance}
+% Barbar{\'a} D, Domeniconi C, Duric Z, Filippone M, Mansfield R, Lawson E (2008) Detecting suspicious behavior in surveillance images. In: Proceedings of Data mining workshops, 2008. ICDMW’08. IEEE international conference on. IEEE, pp 891–900
+% 
+% \bibitem{bentley} 
+% Bentley JL, Sedgewick R (1997)  Fast algorithms for sorting and searching strings. In: Proceedings of the 8 Annual ACM-SIAM Symposium on Discrete Algorithms. pp. 360-369.
+% 
+% 
+% 
+% 
+% %\bibitem{moa}
+% %Bifet A (2017)  \url{https://github.com/Waikato/moa}.
+%  
+%  \bibitem{moa2} 
+% Bifet A, Holmes G, Kirkby R, Pfahringer B (2010) MOA: Massive Online Analysis. Journal of Machine Learning Research 11: 1601-1604
+% 
+% \bibitem{boxJenkins}
+% Box GEP, Jenkins G, Reinsel GC, Ljung GM (2015) Time series analysis: forecasting and control. Wiley.
+%  
+% 
+% \bibitem{sod}
+% Avogadro P, Palonca L, Dominoni M A. (2019) Online anomaly search in time series: significant online discords, under review. 
+%  
+% 
+% 
+% 
+% 
+% 
+% \bibitem{Chandola} 
+% Chandola V, Arindam B, Vipin K (2009) Anomaly detection: A survey. ACM Computing Surveys (CSUR) 41.3 (2009):15.
+% 
+% \bibitem{motif}
+% Chiu B, Keogh E, Lonardi S (2003)  Probabilistic discovery of time series motifs. In: Proceeding KDD '03 Proceedings of the ninth ACM SIGKDD international conference on Knowledge discovery and data mining Pages 493-498.  ISBN:1-58113-737-0 doi>10.1145/956750.956808
+% 
+% 
+% 
+% 
+% 
+% 
+% \bibitem{gama}
+% Gama J (2012) A survey on learning from data streams: current and future trends. Prog Artif Intell (2012) 1: 45. https://doi.org/10.1007/s13748-011-0002-6
+%   
+% \bibitem{gama}
+% Gama J, Zliobaite I, Bifet A, Pechenizky M,  Bouchachia A (2013) A Survey on Concept Drift Adaptation. ACM Comput. Surv, p. 35, January 2013.
+%  
+% 
+% 
+% 
+% \bibitem{hawkins}
+% Hawkins DM (1980) Identification of Outliers. Springer Netherlands. 
+% 
+% \bibitem{htm1} 
+% Hawkins J, Ahmad S (2016) Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Front. Neural Circuits. 10 (2016) 1–13, doi:10.3389/fncir.2016.0 0023.
+%  
+% \bibitem{context}
+% Hayes MA,  Capretz MAM (2015) Contextual anomaly detection framework for big sensor data. Journal of Big Data (2015) 2:2 DOI 10.1186/s40537-014-0011-y
+% 
+% \bibitem{dynbayesnet}
+% Hill DJ,  Minsker BS,  Amir E (2009) Real‐time Bayesian anomaly detection in streaming environmental data. Water Resources Journal \url{https://doi.org/10.1029/2008WR006956}
+%  
+%  
+% 
+% 
+% \bibitem{dataNever} 
+% James J et al. (2018)  Data Never Sleeps 6.0.  \url{https://www.domo.com/blog/data-never-sleeps-6/}
+% 
+% 
+% 
+% 
+% 
+% \bibitem{kaufman}
+% Kaufman L, Rousseeuw PJ (2005) Finding groups in data: an introduction to cluster analysis. Wiley Series in Probability and Statistics, 1st edn. Wiley-Interscience, New York
+%  
+% \bibitem{hotsax}
+% Keogh E,  Lin J, Fu A (2005) HOT SAX: efficiently finding the most unusual time series subsequence. In: Proceedings of the Fifth IEEE International Conference on Data Mining, (ICDM'05) pp. 226–233.
+% 
+% \bibitem{hs1}
+% Keogh E, Lin J, Lee S-H, Van Herle H (2006) Finding the most unusual time series sequence: algorithms and applications. Knowl. Inf. Syst. (2006) 11(1): 1–27
+% 
+% \bibitem{mcod}
+% Kontaki M, Gounaris A, Papadopoulos AN, Tsichlas T, Manolopoulos Y (2011) Continuous monitoring of distance-based outliers over data streams. In: Proceedings of the 27th IEEE International Conference on Data Engineering (ICDE'11), Hannover, Germany.
+% 
+% 
+% 
+% 
+% \bibitem{sax}
+% Lin J, Keogh E, Lonardi S, Chiu B (2003) A Symbolic Representation of Time Series, with Implications for Streaming Algorithms. In: Proceedings of the 8th ACM SIGMOD Workshop on Research Issues in Data Mining and Knowledge Discovery. 
+%  
+%  
+% 
+% 
+% \bibitem{longShort}
+% Malhotra P, Vig L, Shroff G, Agarwal (2015) Long Short Term Memory Networks for Anomaly Detection in Time Series. In: Proceedings of ESANN 2015, Bruges (Belgium), 22-24 April 2015,  ISBN 978-287587014-8.
+% 
+% \bibitem{ksTest}
+% Massey Jr. FJ (1951) The Kolmogorov-Smirnov Test for Goodness of Fit. Journal of the American Statistical Association  Volume 46, Issue 253.
+%      
+% \bibitem{waikato}
+% MOA, Machine Learning for Streams \url{https://moa.cms.waikato.ac.nz/}
+% 
+% 
+% 
+% 
+% 
+% \bibitem{htm2}
+% Padilla DE,  Brinkworth R, McDonnell MD (2013) Performance of a hierarchical temporal memory network in noisy sequence learning. In: Proceedings of the International Conference on Computational Intelligence and Cybernetics, IEEE, 2013, pp. 45–51, doi:10.1109/CyberneticsCom.2013.6865779.
+% 
+% \bibitem{cusum}
+% Page ES (1954) Continuous Inspection Scheme. Biometrika. 41 (1/2): 100–115. doi:10.1093/biomet/41.1-2.100
+%   
+% \bibitem{minority} 
+% Phua C, Alahakoon D, Lee V (2004) Minority Report in Fraud Detection: Classification of Skewed Data. ACM SIGKDD Explorations Newsletter - Special issue on learning from imbalanced datasets, Volume 6 Issue 1, Pages 50-59, ACM New York, NY, USA.
+%  
+% \bibitem{pimentel}
+% Pimentel M, Clifton D, Tarassenko L (2014) A review of novelty detection. Signal Processing, vol. 99, pp. 215-249.
+%  
+% \bibitem{tartakowski}
+% Polunchenko AS, Tartakovsky AG (2012) State-of-the-Art in Sequential Change-Point Detection. Methodol. Comput. Appl. Probab. (2012) 14: 649. https://doi.org/10.1007/s11009-011-9256-5
+% 
+% 
+% \bibitem{senin1}
+% Senin P, Lin J, Wang X, Oates T, Gandhi S, Boedihardjo AP, Chen C, Frankenstein S, Lerner M (2014) GrammarViz 2.0: a tool for grammar-based pattern discovery in time series. In: Proceedings of ECML/PKDD Conference, 2014.
+%   
+% \bibitem{senin2}
+% Senin P, Lin J, Wang X, Oates T, Gandhi S, Boedihardjo AP, Chen C, Frankenstein S, Lerner M (2015) Time series anomaly discovery with grammar-based compression. In: Proceedings of The International Conference on Extending Database Technology, EDBT 15.
+% 
+% \bibitem{sensorNetwork}
+% Sheng B, Li Q, Mao W, Jin W (2007) Outlier detection in sensor
+% networks. In: Proceedings of the 8th ACM International Symposium
+% on Mobile Ad Hoc Networking and Computing (New York, NY, USA,
+% 2007), MobiHoc ’07, ACM, pp. 219–228.
+% 
+% 
+% 
+% \bibitem{exstorm}
+% Tran L, Fan L, Shahabi C (2016) Distance-based outlier detection in data streams. In: Proceedings of the VLDB Endowment, vol. 9, pp. 1089-1100.
+% 
+% \bibitem{outlier}
+% Tukey JW (1977) Exploratory Data Analysis. Addison-Wesley. ISBN 0-201-07616-0. OCLC 3058187.
+% 
+% 
+% \bibitem{eeg}
+% Govindan RB, Narayanan K, Gopinathan MS (1998), On the evidence of deterministic chaos in ECG: Surrogate and predictability analysis. Chaos. 1998 Jun;8(2):495-502.
+% 
+% 
+% \bibitem{wang}
+% Wang C, Viswanathan K, Choudur L, Talwar V, Satterfield W, Schwan K (2011) Statistical Techniques for Online Anomaly Detection in Data Centers. In: Proceedings of the IFIP/IEEE International Symposium on Integrated Network Management (1M) 2011, 23 May - 27
+% 
+% \bibitem{senin3}
+% Wang X, Lin J, Senin P, Oates T, Gandhi, Boedihardjo AP, Chen C, Frankenstein S (2016) RPM: Representative Pattern Mining for Efficient Time Series Classification. In: Proceedings of the International Conference on Extending Database Technology, EDBT 16 (pp. 185-196).
+%  
+% \bibitem{netflix}
+% Wong J (2015) Netflix Surus, GitHub, Online Code Repos \url{https://github.com/Netflix/} Surus 
+%  
+% 
+% 
+% 
+%  
+% \bibitem{abstractc} 
+% Yang D, Rundensteiner E, Ward M (2009) Neighbor-based pattern detection for windows over streaming data. In: Proceedings of the 12th International Conference on Extending Database. Technology (EDBT'09), Saint Petersburg, Russia.
+%  
+% \bibitem{matrixI}
+% Yeh CC-M, Zhu Y, Ulanova L, Begum N, Ding Y, Dau HA, Silva DF, Mueen A, Keogh E (2016) Matrix Profile I: All Pairs Similarity Joins for Time Series: A Unifying View that Includes Motifs, Discords and Shapelets. IEEE ICDM 2016. 
+%  
+% 
+% \bibitem{sax}
+%  Lin, J., Keogh, E., Lonardi, S., Chiu, B. (2003). A Symbolic
+% Representation of Time Series, with Implications for
+% thStreaming Algorithms. In proceedings of the 8 ACM
+% SIGMOD Workshop on Research Issues in Data Mining and
+% Knowledge Discovery.
+% 
+% \bibitem{physionet}
+% Goldberger, A.L. et al., PhysioBank, PhysioToolkit,
+% and PhysioNet: components of a new research resource
+% for complex physiologic signals, Circulation, 101(23)
+% (2000)
+% 
+% 
+% \bibitem{arima}
+% Zhang GP (2003) Time series forecasting using a hybrid ARIMA and neural network model. Neurocomputing, Volume 50, Pages 159-175
+% 
+% \bibitem{streamingConceptDrift}
+% Zhao G, Li Z, Liu F, Tang Y (2013) A concept drifting based clustering framework for data streams. In: Proceedings of Emerging intelligent data and web technologies (EIDWT), 2013 fourth international conference on, pp 122–129. doi:10.1109/EIDWT.2013.26
+% 
+% 
+% 
+% 
+% 
+% 
+% 
+% 
+% \end{thebibliography}
+% % 
+% 
+% 
+% \end{document}
+% end of file template.tex
+
+
+
+
+
+
+
+
+
+
+%\bibliographystyle{apalike}
+%{\small
+%\bibliography{TopTest}}
+
+
+
+\end{document}
+
